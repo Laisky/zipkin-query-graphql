@@ -1,0 +1,17 @@
+scalar Date
+
+input Pagination {
+    page: Int!
+    size: Int!
+}
+
+type Span {
+    url: String!
+}
+
+type Query {
+  traces(page: Pagination = {page: 0, size: 20},
+    want: [String!] = [],
+    exclude: [String!] = []): [Span!]
+}
+

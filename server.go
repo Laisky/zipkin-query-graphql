@@ -42,7 +42,7 @@ func RunServer(addr string) {
 	// cmdline, profile, symbol, goroutine, heap, threadcreate, block
 	pprof.Register(server, "pprof")
 
-	server.Any("/ui/", ginMiddlewares.FromStd(handler.Playground("GraphQL playground", "/graphql/query/")))
+	server.Any("/ui/", ginMiddlewares.FromStd(handler.Playground("GraphQL playground", "/query/")))
 	server.Any("/query/", ginMiddlewares.FromStd(handler.GraphQL(NewExecutableSchema(Config{Resolvers: &Resolver{}}))))
 
 	utils.Logger.Info("listening on http", zap.String("addr", addr))

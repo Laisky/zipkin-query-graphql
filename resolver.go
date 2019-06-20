@@ -22,7 +22,7 @@ func (r *Resolver) Query() QueryResolver {
 type queryResolver struct{ *Resolver }
 
 func parseStr2Time(ts string) (t time.Time, err error) {
-	if t, err = time.Parse(uiTimeFormat, ts+utils.Settings.GetString("settings.timezone")); err != nil {
+	if t, err = time.Parse(uiTimeFormat, ts+utils.Settings.GetString("settings.ui_timezone")); err != nil {
 		utils.Logger.Warn("try to parse ts got error", zap.Error(err), zap.String("ts", ts))
 		return utils.Clock.GetUTCNow(), err
 	}

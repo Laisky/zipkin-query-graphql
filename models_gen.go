@@ -2,11 +2,18 @@
 
 package zipkin_graphql
 
+type DateRange struct {
+	From string `json:"from"`
+	To   string `json:"to"`
+}
+
 type Pagination struct {
 	Page int `json:"page"`
 	Size int `json:"size"`
 }
 
 type Span struct {
-	URL string `json:"url"`
+	URL        string   `json:"url"`
+	Svcs       []string `json:"svcs"`
+	DurationMs int      `json:"duration_ms"`
 }

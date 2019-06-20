@@ -41,16 +41,18 @@ type DirectiveRoot struct {
 
 type ComplexityRoot struct {
 	Query struct {
-		Traces func(childComplexity int, page *Pagination, want []string, exclude []string) int
+		Traces func(childComplexity int, want []string, exclude []string, size int, daterange DateRange) int
 	}
 
 	Span struct {
-		URL func(childComplexity int) int
+		DurationMs func(childComplexity int) int
+		Svcs       func(childComplexity int) int
+		URL        func(childComplexity int) int
 	}
 }
 
 type QueryResolver interface {
-	Traces(ctx context.Context, page *Pagination, want []string, exclude []string) ([]Span, error)
+	Traces(ctx context.Context, want []string, exclude []string, size int, daterange DateRange) ([]Span, error)
 }
 
 type executableSchema struct {
@@ -78,7 +80,21 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.Traces(childComplexity, args["page"].(*Pagination), args["want"].([]string), args["exclude"].([]string)), true
+		return e.complexity.Query.Traces(childComplexity, args["want"].([]string), args["exclude"].([]string), args["size"].(int), args["daterange"].(DateRange)), true
+
+	case "Span.DurationMs":
+		if e.complexity.Span.DurationMs == nil {
+			break
+		}
+
+		return e.complexity.Span.DurationMs(childComplexity), true
+
+	case "Span.Svcs":
+		if e.complexity.Span.Svcs == nil {
+			break
+		}
+
+		return e.complexity.Span.Svcs(childComplexity), true
 
 	case "Span.URL":
 		if e.complexity.Span.URL == nil {
@@ -160,12 +176,20 @@ input Pagination {
 
 type Span {
     url: String!
+    svcs: [String!]!
+    duration_ms: Int!
+}
+
+input DateRange {
+    from: Date!
+    to: Date!
 }
 
 type Query {
-  traces(page: Pagination = {page: 0, size: 20},
-    want: [String!] = [],
-    exclude: [String!] = []): [Span!]
+  traces(want: [String!] = [],
+    exclude: [String!] = [],
+    size: Int! = 1000,
+    daterange: DateRange!): [Span!]
 }
 
 `},
@@ -192,30 +216,38 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 func (ec *executionContext) field_Query_traces_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *Pagination
-	if tmp, ok := rawArgs["page"]; ok {
-		arg0, err = ec.unmarshalOPagination2ᚖgithubᚗcomᚋLaiskyᚋzipkinᚑqueryᚑgraphqlᚐPagination(ctx, tmp)
+	var arg0 []string
+	if tmp, ok := rawArgs["want"]; ok {
+		arg0, err = ec.unmarshalOString2ᚕstring(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["page"] = arg0
+	args["want"] = arg0
 	var arg1 []string
-	if tmp, ok := rawArgs["want"]; ok {
+	if tmp, ok := rawArgs["exclude"]; ok {
 		arg1, err = ec.unmarshalOString2ᚕstring(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["want"] = arg1
-	var arg2 []string
-	if tmp, ok := rawArgs["exclude"]; ok {
-		arg2, err = ec.unmarshalOString2ᚕstring(ctx, tmp)
+	args["exclude"] = arg1
+	var arg2 int
+	if tmp, ok := rawArgs["size"]; ok {
+		arg2, err = ec.unmarshalNInt2int(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["exclude"] = arg2
+	args["size"] = arg2
+	var arg3 DateRange
+	if tmp, ok := rawArgs["daterange"]; ok {
+		arg3, err = ec.unmarshalNDateRange2githubᚗcomᚋLaiskyᚋzipkinᚑqueryᚑgraphqlᚐDateRange(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["daterange"] = arg3
 	return args, nil
 }
 
@@ -271,7 +303,7 @@ func (ec *executionContext) _Query_traces(ctx context.Context, field graphql.Col
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp := ec.FieldMiddleware(ctx, nil, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Traces(rctx, args["page"].(*Pagination), args["want"].([]string), args["exclude"].([]string))
+		return ec.resolvers.Query().Traces(rctx, args["want"].([]string), args["exclude"].([]string), args["size"].(int), args["daterange"].(DateRange))
 	})
 	if resTmp == nil {
 		return graphql.Null
@@ -362,6 +394,60 @@ func (ec *executionContext) _Span_url(ctx context.Context, field graphql.Collect
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
 	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Span_svcs(ctx context.Context, field graphql.CollectedField, obj *Span) graphql.Marshaler {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() { ec.Tracer.EndFieldExecution(ctx) }()
+	rctx := &graphql.ResolverContext{
+		Object:   "Span",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp := ec.FieldMiddleware(ctx, obj, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Svcs, nil
+	})
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNString2ᚕstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Span_duration_ms(ctx context.Context, field graphql.CollectedField, obj *Span) graphql.Marshaler {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() { ec.Tracer.EndFieldExecution(ctx) }()
+	rctx := &graphql.ResolverContext{
+		Object:   "Span",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp := ec.FieldMiddleware(ctx, obj, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.DurationMs, nil
+	})
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) ___Directive_name(ctx context.Context, field graphql.CollectedField, obj *introspection.Directive) graphql.Marshaler {
@@ -1195,6 +1281,30 @@ func (ec *executionContext) ___Type_ofType(ctx context.Context, field graphql.Co
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputDateRange(ctx context.Context, v interface{}) (DateRange, error) {
+	var it DateRange
+	var asMap = v.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "from":
+			var err error
+			it.From, err = ec.unmarshalNDate2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "to":
+			var err error
+			it.To, err = ec.unmarshalNDate2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputPagination(ctx context.Context, v interface{}) (Pagination, error) {
 	var it Pagination
 	var asMap = v.(map[string]interface{})
@@ -1281,6 +1391,16 @@ func (ec *executionContext) _Span(ctx context.Context, sel ast.SelectionSet, obj
 			out.Values[i] = graphql.MarshalString("Span")
 		case "url":
 			out.Values[i] = ec._Span_url(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalid = true
+			}
+		case "svcs":
+			out.Values[i] = ec._Span_svcs(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalid = true
+			}
+		case "duration_ms":
+			out.Values[i] = ec._Span_duration_ms(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalid = true
 			}
@@ -1548,6 +1668,18 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return graphql.MarshalBoolean(v)
 }
 
+func (ec *executionContext) unmarshalNDate2string(ctx context.Context, v interface{}) (string, error) {
+	return graphql.UnmarshalString(v)
+}
+
+func (ec *executionContext) marshalNDate2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
+	return graphql.MarshalString(v)
+}
+
+func (ec *executionContext) unmarshalNDateRange2githubᚗcomᚋLaiskyᚋzipkinᚑqueryᚑgraphqlᚐDateRange(ctx context.Context, v interface{}) (DateRange, error) {
+	return ec.unmarshalInputDateRange(ctx, v)
+}
+
 func (ec *executionContext) unmarshalNInt2int(ctx context.Context, v interface{}) (int, error) {
 	return graphql.UnmarshalInt(v)
 }
@@ -1566,6 +1698,35 @@ func (ec *executionContext) unmarshalNString2string(ctx context.Context, v inter
 
 func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
 	return graphql.MarshalString(v)
+}
+
+func (ec *executionContext) unmarshalNString2ᚕstring(ctx context.Context, v interface{}) ([]string, error) {
+	var vSlice []interface{}
+	if v != nil {
+		if tmp1, ok := v.([]interface{}); ok {
+			vSlice = tmp1
+		} else {
+			vSlice = []interface{}{v}
+		}
+	}
+	var err error
+	res := make([]string, len(vSlice))
+	for i := range vSlice {
+		res[i], err = ec.unmarshalNString2string(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNString2ᚕstring(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNString2string(ctx, sel, v[i])
+	}
+
+	return ret
 }
 
 func (ec *executionContext) marshalN__Directive2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirective(ctx context.Context, sel ast.SelectionSet, v introspection.Directive) graphql.Marshaler {
@@ -1803,18 +1964,6 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 		return graphql.Null
 	}
 	return ec.marshalOBoolean2bool(ctx, sel, *v)
-}
-
-func (ec *executionContext) unmarshalOPagination2githubᚗcomᚋLaiskyᚋzipkinᚑqueryᚑgraphqlᚐPagination(ctx context.Context, v interface{}) (Pagination, error) {
-	return ec.unmarshalInputPagination(ctx, v)
-}
-
-func (ec *executionContext) unmarshalOPagination2ᚖgithubᚗcomᚋLaiskyᚋzipkinᚑqueryᚑgraphqlᚐPagination(ctx context.Context, v interface{}) (*Pagination, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalOPagination2githubᚗcomᚋLaiskyᚋzipkinᚑqueryᚑgraphqlᚐPagination(ctx, v)
-	return &res, err
 }
 
 func (ec *executionContext) marshalOSpan2ᚕgithubᚗcomᚋLaiskyᚋzipkinᚑqueryᚑgraphqlᚐSpan(ctx context.Context, sel ast.SelectionSet, v []Span) graphql.Marshaler {

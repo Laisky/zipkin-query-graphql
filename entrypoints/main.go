@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Laisky/zap"
+
+	zipkin_graphql "github.com/Laisky/zipkin-query-graphql"
+
 	"github.com/spf13/pflag"
 
 	"github.com/Laisky/go-utils"
-	laisky_blog_graphql "github.com/Laisky/laisky-blog-graphql"
-	"github.com/Laisky/zap"
 )
 
 func SetupSettings() {
@@ -28,7 +30,7 @@ func SetupSettings() {
 
 	// load configuration
 	cfgDirPath := utils.Settings.GetString("config")
-	if err := utils.Settings.Setup(cfgDirPath); err != nil {
+	if err := utils.Settings.SetupFromFile(cfgDirPath); err != nil {
 		utils.Logger.Panic("can not load config from disk",
 			zap.String("dirpath", cfgDirPath))
 	} else {
@@ -40,9 +42,9 @@ func SetupSettings() {
 func SetupArgs() {
 	pflag.Bool("debug", false, "run in debug mode")
 	pflag.Bool("dry", false, "run in dry mode")
-	pflag.String("addr", "localhost:8080", "like `localhost:8080`")
-	pflag.StringArray("esapis", []string{}, "like `http://esapi:8080`")
-	pflag.String("config", "/etc/zipkin-query-graphql/settings", "config file directory path")
+	pflag.String("addr", "localhost:8090", "default `localhost:8090`")
+	pflag.String("span-url-prefix", "http://zipkin-server.pro.ptcloud.t.home/zipkin/traces/", "prefix to generate span url")
+	pflag.String("config", "/etc/go-zipkin-query/settings.yml", "config file path")
 	pflag.String("log-level", "info", "`debug/info/error`")
 	pflag.Int("heartbeat", 60, "heartbeat seconds")
 	pflag.Parse()
@@ -53,6 +55,7 @@ func main() {
 	defer utils.Logger.Sync()
 	SetupArgs()
 	SetupSettings()
+	zipkin_graphql.SetupESCli(utils.Settings.GetString("settings.esapi"))
 
-	laisky_blog_graphql.RunServer(utils.Settings.GetString("addr"))
+	zipkin_graphql.RunServer(utils.Settings.GetString("addr"))
 }

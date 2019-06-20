@@ -7,11 +7,19 @@ input Pagination {
 
 type Span {
     url: String!
+    svcs: [String!]!
+    duration_ms: Int!
+}
+
+input DateRange {
+    from: Date!
+    to: Date!
 }
 
 type Query {
-  traces(page: Pagination = {page: 0, size: 20},
-    want: [String!] = [],
-    exclude: [String!] = []): [Span!]
+  traces(want: [String!] = [],
+    exclude: [String!] = [],
+    size: Int! = 1000,
+    daterange: DateRange!): [Span!]
 }
 

@@ -22,4 +22,5 @@ FROM alpine:3.9
 COPY --from=gobuild /etc/ssl/certs /etc/ssl/certs
 COPY --from=gobuild /goapp/main go-zipkin-query
 
-CMD ./go-zipkin-query --debug --addr=127.0.0.1:8080
+ENTRYPOINT [ "./go-zipkin-query" ]
+CMD ["--debug", "--addr=0.0.0.0:8090"]

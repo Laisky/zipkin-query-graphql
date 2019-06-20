@@ -1,0 +1,25 @@
+scalar Date
+
+input Pagination {
+    page: Int!
+    size: Int!
+}
+
+type Span {
+    url: String!
+    svcs: [String!]!
+    duration_ms: Int!
+}
+
+input DateRange {
+    from: Date!
+    to: Date!
+}
+
+type Query {
+  traces(want: [String!] = [],
+    exclude: [String!] = [],
+    size: Int! = 1000,
+    daterange: DateRange!): [Span!]
+}
+

@@ -2,6 +2,12 @@
 
 package zipkin_graphql
 
+import (
+	"fmt"
+	"io"
+	"strconv"
+)
+
 type DateRange struct {
 	From string `json:"from"`
 	To   string `json:"to"`
@@ -16,4 +22,49 @@ type Span struct {
 	URL        string   `json:"url"`
 	Svcs       []string `json:"svcs"`
 	DurationMs int      `json:"duration_ms"`
+}
+
+type Env string
+
+const (
+	EnvSit  Env = "sit"
+	EnvPerf Env = "perf"
+	EnvUat  Env = "uat"
+	EnvProd Env = "prod"
+)
+
+var AllEnv = []Env{
+	EnvSit,
+	EnvPerf,
+	EnvUat,
+	EnvProd,
+}
+
+func (e Env) IsValid() bool {
+	switch e {
+	case EnvSit, EnvPerf, EnvUat, EnvProd:
+		return true
+	}
+	return false
+}
+
+func (e Env) String() string {
+	return string(e)
+}
+
+func (e *Env) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = Env(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid Env", str)
+	}
+	return nil
+}
+
+func (e Env) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
 }

@@ -16,10 +16,20 @@ input DateRange {
     to: Date!
 }
 
+enum Env {
+    sit
+    perf
+    uat
+    prod
+}
+
 type Query {
-  traces(want: [String!] = [],
+  traces(
+    env: Env! = prod,
+    want: [String!] = [],
     exclude: [String!] = [],
     size: Int! = 1000,
-    daterange: DateRange!): [Span!]
+    daterange: DateRange!
+  ): [Span!]
 }
 

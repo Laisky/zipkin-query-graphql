@@ -41,7 +41,7 @@ type DirectiveRoot struct {
 
 type ComplexityRoot struct {
 	Query struct {
-		Traces func(childComplexity int, want []string, exclude []string, size int, daterange DateRange) int
+		Traces func(childComplexity int, env Env, want []string, exclude []string, size int, daterange DateRange) int
 	}
 
 	Span struct {
@@ -52,7 +52,7 @@ type ComplexityRoot struct {
 }
 
 type QueryResolver interface {
-	Traces(ctx context.Context, want []string, exclude []string, size int, daterange DateRange) ([]Span, error)
+	Traces(ctx context.Context, env Env, want []string, exclude []string, size int, daterange DateRange) ([]Span, error)
 }
 
 type executableSchema struct {
@@ -80,7 +80,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.Traces(childComplexity, args["want"].([]string), args["exclude"].([]string), args["size"].(int), args["daterange"].(DateRange)), true
+		return e.complexity.Query.Traces(childComplexity, args["env"].(Env), args["want"].([]string), args["exclude"].([]string), args["size"].(int), args["daterange"].(DateRange)), true
 
 	case "Span.DurationMs":
 		if e.complexity.Span.DurationMs == nil {
@@ -185,11 +185,21 @@ input DateRange {
     to: Date!
 }
 
+enum Env {
+    sit
+    perf
+    uat
+    prod
+}
+
 type Query {
-  traces(want: [String!] = [],
+  traces(
+    env: Env! = prod,
+    want: [String!] = [],
     exclude: [String!] = [],
     size: Int! = 1000,
-    daterange: DateRange!): [Span!]
+    daterange: DateRange!
+  ): [Span!]
 }
 
 `},
@@ -216,38 +226,46 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 func (ec *executionContext) field_Query_traces_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 []string
-	if tmp, ok := rawArgs["want"]; ok {
-		arg0, err = ec.unmarshalOString2ᚕstring(ctx, tmp)
+	var arg0 Env
+	if tmp, ok := rawArgs["env"]; ok {
+		arg0, err = ec.unmarshalNEnv2githubᚗcomᚋLaiskyᚋzipkinᚑqueryᚑgraphqlᚐEnv(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["want"] = arg0
+	args["env"] = arg0
 	var arg1 []string
-	if tmp, ok := rawArgs["exclude"]; ok {
+	if tmp, ok := rawArgs["want"]; ok {
 		arg1, err = ec.unmarshalOString2ᚕstring(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["exclude"] = arg1
-	var arg2 int
+	args["want"] = arg1
+	var arg2 []string
+	if tmp, ok := rawArgs["exclude"]; ok {
+		arg2, err = ec.unmarshalOString2ᚕstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["exclude"] = arg2
+	var arg3 int
 	if tmp, ok := rawArgs["size"]; ok {
-		arg2, err = ec.unmarshalNInt2int(ctx, tmp)
+		arg3, err = ec.unmarshalNInt2int(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["size"] = arg2
-	var arg3 DateRange
+	args["size"] = arg3
+	var arg4 DateRange
 	if tmp, ok := rawArgs["daterange"]; ok {
-		arg3, err = ec.unmarshalNDateRange2githubᚗcomᚋLaiskyᚋzipkinᚑqueryᚑgraphqlᚐDateRange(ctx, tmp)
+		arg4, err = ec.unmarshalNDateRange2githubᚗcomᚋLaiskyᚋzipkinᚑqueryᚑgraphqlᚐDateRange(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["daterange"] = arg3
+	args["daterange"] = arg4
 	return args, nil
 }
 
@@ -303,7 +321,7 @@ func (ec *executionContext) _Query_traces(ctx context.Context, field graphql.Col
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp := ec.FieldMiddleware(ctx, nil, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Traces(rctx, args["want"].([]string), args["exclude"].([]string), args["size"].(int), args["daterange"].(DateRange))
+		return ec.resolvers.Query().Traces(rctx, args["env"].(Env), args["want"].([]string), args["exclude"].([]string), args["size"].(int), args["daterange"].(DateRange))
 	})
 	if resTmp == nil {
 		return graphql.Null
@@ -1678,6 +1696,15 @@ func (ec *executionContext) marshalNDate2string(ctx context.Context, sel ast.Sel
 
 func (ec *executionContext) unmarshalNDateRange2githubᚗcomᚋLaiskyᚋzipkinᚑqueryᚑgraphqlᚐDateRange(ctx context.Context, v interface{}) (DateRange, error) {
 	return ec.unmarshalInputDateRange(ctx, v)
+}
+
+func (ec *executionContext) unmarshalNEnv2githubᚗcomᚋLaiskyᚋzipkinᚑqueryᚑgraphqlᚐEnv(ctx context.Context, v interface{}) (Env, error) {
+	var res Env
+	return res, res.UnmarshalGQL(v)
+}
+
+func (ec *executionContext) marshalNEnv2githubᚗcomᚋLaiskyᚋzipkinᚑqueryᚑgraphqlᚐEnv(ctx context.Context, sel ast.SelectionSet, v Env) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) unmarshalNInt2int(ctx context.Context, v interface{}) (int, error) {

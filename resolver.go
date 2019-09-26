@@ -30,9 +30,10 @@ func parseStr2Time(ts string) (t time.Time, err error) {
 	return t.UTC(), nil
 }
 
-func (r *queryResolver) Traces(ctx context.Context, want, exclude []string, size int, daterange DateRange) (spans []Span, err error) {
+func (r *queryResolver) Traces(ctx context.Context, env Env, want []string, exclude []string, size int, daterange DateRange) ([]Span, error) {
 	var (
 		ft, tt time.Time
+		err    error
 	)
 	if ft, err = parseStr2Time(daterange.From); err != nil {
 		return nil, errors.Wrap(err, "invalidate from, time should be `2019-10-10 10:10:10`")
@@ -47,7 +48,7 @@ func (r *queryResolver) Traces(ctx context.Context, want, exclude []string, size
 		return nil, fmt.Errorf("`want` and `exclude` should not all empty")
 	}
 
-	docuChan, err := esClient.LoadSpansChan(ctx, size, "zipkin-prod-alias", append(want, exclude...), ft, tt)
+	docuChan, err := esClient.LoadSpansChan(ctx, size, "zipkin-"+env.String()+"-alias", append(want, exclude...), ft, tt)
 	if err != nil {
 		utils.Logger.Warn("try to scroll got error", zap.Error(err))
 		return nil, fmt.Errorf("try to scroll docus got error")

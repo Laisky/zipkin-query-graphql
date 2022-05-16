@@ -8,8 +8,8 @@ require (
 	github.com/Laisky/zap v1.9.2
 	github.com/deckarep/golang-set v1.7.1
 	github.com/gin-contrib/pprof v1.2.0
-	github.com/gin-gonic/gin v1.4.0
-	github.com/json-iterator/go v1.1.6
+	github.com/gin-gonic/gin v1.7.0
+	github.com/json-iterator/go v1.1.9
 	github.com/pelletier/go-toml v1.4.0 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/spf13/afero v1.2.2 // indirect

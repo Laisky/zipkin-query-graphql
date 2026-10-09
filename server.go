@@ -1,14 +1,16 @@
 package zipkin_graphql
 
 import (
+	"errors"
 	"net/http"
 
-	ginMiddlewares "github.com/Laisky/go-utils/gin-middlewares"
+	ginMiddlewares "github.com/Laisky/gin-middlewares"
 
 	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
 
-	"github.com/99designs/gqlgen/handler"
+	"github.com/99designs/gqlgen/graphql/handler"
+	"github.com/99designs/gqlgen/graphql/playground"
 
 	utils "github.com/Laisky/go-utils"
 	"github.com/Laisky/zap"
@@ -20,9 +22,25 @@ var (
 )
 
 func setupAuth() (err error) {
-	cfg := ginMiddlewares.NewAuthCfg(utils.Settings.GetString("settings.secret"))
-	auth, err = ginMiddlewares.NewAuth(cfg)
+	secret := utils.Settings.GetString("settings.secret")
+	if secret == "" {
+		auth = nil
+		return errors.New("settings.secret must not be empty")
+	}
+	auth, err = ginMiddlewares.NewAuth([]byte(secret))
 	return
+}
+
+// newGraphQLHandler preserves the legacy JSON-only POST contract regardless of Content-Type.
+func newGraphQLHandler() http.HandlerFunc {
+	graphQLServer := handler.NewDefaultServer(NewExecutableSchema(Config{Resolvers: &Resolver{}}))
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			r = r.Clone(r.Context())
+			r.Header.Set("Content-Type", "application/json")
+		}
+		graphQLServer.ServeHTTP(w, r)
+	}
 }
 
 func RunServer(addr string) {
@@ -42,8 +60,8 @@ func RunServer(addr string) {
 	// cmdline, profile, symbol, goroutine, heap, threadcreate, block
 	pprof.Register(server, "pprof")
 
-	server.Any("/ui/", ginMiddlewares.FromStd(handler.Playground("GraphQL playground", "/query/")))
-	server.Any("/query/", ginMiddlewares.FromStd(handler.GraphQL(NewExecutableSchema(Config{Resolvers: &Resolver{}}))))
+	server.Any("/ui/", ginMiddlewares.FromStd(playground.Handler("GraphQL playground", "/query/")))
+	server.Any("/query/", ginMiddlewares.FromStd(newGraphQLHandler()))
 
 	utils.Logger.Info("listening on http", zap.String("addr", addr))
 	utils.Logger.Panic("httpServer exit", zap.Error(server.Run(addr)))

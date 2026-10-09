@@ -39,14 +39,16 @@ func SetupESCli(esapi string) {
 }
 
 func NewESClient(api string) (*ESClient, error) {
-	if resp, err := httpClient.Get(api); err != nil {
+	resp, err := httpClient.Get(api)
+	if err != nil {
 		return nil, errors.Wrap(err, "try to ping es api got error")
-	} else if resp.StatusCode/100 != 2 {
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode/100 != 2 {
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			return nil, errors.Wrap(err, "try to read err resp got error")
 		}
-		defer resp.Body.Close()
 		return nil, errors.Wrap(fmt.Errorf("[%v] %v", resp.StatusCode, string(body)), "try to ping es api got error")
 	}
 
@@ -158,7 +160,8 @@ func (es *ESClient) LoadSpansChan(ctx context.Context, maxN int, index string, s
 	totalN := 0
 	outchan = make(chan *SpanDocu, 1000)
 	go func(resp *ScrollResp) {
-		defer func(sid string) {
+		sid := resp.ScrollID
+		defer func() {
 			close(outchan)
 			// delete scroll
 			if err := utils.RequestJSONWithClient(
@@ -170,19 +173,21 @@ func (es *ESClient) LoadSpansChan(ctx context.Context, maxN int, index string, s
 			); err != nil {
 				utils.Logger.Warn("try to delete scroll got error", zap.Error(err))
 			}
-		}(resp.ScrollID)
+		}()
 
 		var (
 			gotn int
 			err  error
-			sid  = resp.ScrollID
 		)
 		for {
 			for _, docu := range resp.Hits.Hits {
+				if totalN >= maxN {
+					return
+				}
 				select {
 				case outchan <- docu.Source:
 					totalN++
-					if totalN > maxN {
+					if totalN >= maxN {
 						return
 					}
 				case <-ctx.Done():
@@ -205,6 +210,9 @@ func (es *ESClient) LoadSpansChan(ctx context.Context, maxN int, index string, s
 				return
 			}
 
+			if resp.ScrollID != "" {
+				sid = resp.ScrollID
+			}
 			gotn = len(resp.Hits.Hits)
 			utils.Logger.Info("got new spans", zap.Int("n", gotn))
 			if gotn == 0 {

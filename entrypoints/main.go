@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/Laisky/zap"
@@ -9,9 +10,24 @@ import (
 	zipkin_graphql "github.com/Laisky/zipkin-query-graphql"
 
 	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 
 	"github.com/Laisky/go-utils"
 )
+
+// loadSettingsFromFile preserves the legacy single-YAML-file behavior without following include fields.
+func loadSettingsFromFile(filePath string) error {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return fmt.Errorf("open configuration: %w", err)
+	}
+	defer file.Close()
+	viper.SetConfigType("yaml")
+	if err := viper.ReadConfig(file); err != nil {
+		return fmt.Errorf("read configuration: %w", err)
+	}
+	return nil
+}
 
 func SetupSettings() {
 	// mode
@@ -23,14 +39,22 @@ func SetupSettings() {
 	}
 
 	// log
-	utils.SetupLogger(utils.Settings.GetString("log-level"))
+	level := utils.Settings.GetString("log-level")
+	switch level {
+	case "debug", "info", "warn", "error":
+	default:
+		panic("log level only be debug/info/warn/error")
+	}
+	if _, err := utils.CreateNewDefaultLogger("zipkin-query-graphql", level); err != nil {
+		panic(err)
+	}
 
 	// clock
-	utils.SetupClock(100 * time.Millisecond)
+	utils.SetInternalClock(100 * time.Millisecond)
 
 	// load configuration
 	cfgDirPath := utils.Settings.GetString("config")
-	if err := utils.Settings.SetupFromFile(cfgDirPath); err != nil {
+	if err := loadSettingsFromFile(cfgDirPath); err != nil {
 		utils.Logger.Panic("can not load config from disk",
 			zap.String("dirpath", cfgDirPath))
 	} else {

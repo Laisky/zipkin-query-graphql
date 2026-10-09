@@ -1,14 +1,21 @@
-# .gqlgen.yml example
-#
-# Refer to https://gqlgen.com/config/
-# for detailed .gqlgen.yml documentation.
-
 schema:
 - schema.graphql
 exec:
   filename: generated.go
+  package: zipkin_graphql
 model:
-  filename: models_gen.go
+  filename: models_generated.go
+  package: zipkin_graphql
 resolver:
+  layout: single-file
+  preserve_resolver: true
   filename: resolver.go
   type: Resolver
+  package: zipkin_graphql
+autobind:
+- github.com/Laisky/zipkin-query-graphql
+omit_slice_element_pointers: true
+models:
+  Date:
+    model:
+    - github.com/99designs/gqlgen/graphql.String

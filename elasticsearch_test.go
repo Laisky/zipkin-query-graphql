@@ -153,4 +153,8 @@ func TestESClient(t *testing.T) {
 }
 
 // init configures test logging without enabling request debugging.
-func init() { utils.SetupLogger("error") }
+func init() {
+	if _, err := utils.CreateNewDefaultLogger("zipkin-query-graphql-test", "error"); err != nil {
+		panic(err)
+	}
+}

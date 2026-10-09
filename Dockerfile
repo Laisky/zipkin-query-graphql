@@ -14,7 +14,7 @@ RUN go mod download
 
 # static build
 ADD . .
-RUN go build -a --ldflags '-extldflags "-static"' entrypoints/main.go
+RUN go build -a -tags timetzdata --ldflags '-linkmode external -extldflags "-static"' entrypoints/main.go
 
 
 # copy executable file and certs to a pure container
